@@ -13,7 +13,7 @@ import (
 type ITodoService interface {
 	GetAll() ([]common.Todo, error)
 	GetByID(id int) (common.Todo, error)
-	Create(todo common.Todo) (common.Todo, error)
+	Create(todo common.Todo) (string, error)
 	Update(todo common.Todo) (common.Todo, error)
 	Delete(id int) error
 }
@@ -63,7 +63,7 @@ func (s *TodoService) GetByID(id int) (common.Todo, error) {
 	return todo, nil
 }
 
-func (s *TodoService) Create(todo common.Todo) (common.Todo, error) {
+func (s *TodoService) Create(todo common.Todo) (id string, err error) {
 	result, err := s.db.Exec(
 		"INSERT INTO todos (title, description, status) VALUES (?, ?, ?)",
 		todo.Title,
@@ -71,18 +71,18 @@ func (s *TodoService) Create(todo common.Todo) (common.Todo, error) {
 		todo.Status)
 
 	if err != nil {
-		return todo, err
+		return
 	}
 
 	lastID, err := result.LastInsertId()
 
 	if err != nil {
-		return todo, err
+		return
 	}
 
-	todo.ID = int(lastID)
+	id = fmt.Sprintf("%d", lastID)
 
-	return todo, nil
+	return
 }
 
 func (s *TodoService) Update(todo common.Todo) (common.Todo, error) {
@@ -126,7 +126,8 @@ func NewTodoService(db *sql.DB) ITodoService {
 func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 	service := NewTodoService(db)
 
-	r.GET("/todos", func(c *gin.Context) {
+	todoRouter := r.Group("/todos")
+	todoRouter.GET("/", func(c *gin.Context) {
 		todos, err := service.GetAll()
 
 		if err != nil {
@@ -136,8 +137,7 @@ func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 
 		c.JSON(200, todos)
 	})
-
-	r.GET("/todos/:id", func(c *gin.Context) {
+	todoRouter.GET("/:id", func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
 
 		if err != nil {
@@ -155,7 +155,7 @@ func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 		c.JSON(200, todo)
 	})
 
-	r.POST("/todos", func(c *gin.Context) {
+	todoRouter.POST("/", func(c *gin.Context) {
 		var todo common.Todo
 
 		if err := c.ShouldBindJSON(&todo); err != nil {
@@ -163,17 +163,18 @@ func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 			return
 		}
 
-		newTodo, err := service.Create(todo)
+		id, err := service.Create(todo)
 
 		if err != nil {
 			c.JSON(500, gin.H{"message": err.Error()})
 			return
 		}
 
-		c.JSON(201, newTodo)
+		c.Header("Location", "/todos/"+id)
+		c.Status(201)
 	})
 
-	r.PUT("/todos/:id", func(c *gin.Context) {
+	todoRouter.PUT("/:id", func(c *gin.Context) {
 		var todo common.Todo
 
 		if err := c.ShouldBindJSON(&todo); err != nil {
@@ -197,10 +198,11 @@ func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 			return
 		}
 
-		c.JSON(200, newTodo)
+		c.Header("Location", "/todos/"+strconv.Itoa(newTodo.ID))
+		c.Status(200)
 	})
 
-	r.DELETE("/todos/:id", func(c *gin.Context) {
+	todoRouter.DELETE("/:id", func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
 
 		if err != nil {
@@ -215,6 +217,6 @@ func RegisterTodoHandler(r *gin.Engine, db *sql.DB) {
 			return
 		}
 
-		c.JSON(200, gin.H{"message": "common.Todo deleted"})
+		c.Status(204)
 	})
 }
