@@ -20,6 +20,8 @@ func main() {
 	db := openDB()
 	createTableIfNotExist(db)
 
+	panic("Hohoho")
+
 	r := gin.Default()
 	ping.RegisterPingHandler(r)
 	todo.RegisterTodoHandler(r, db)
