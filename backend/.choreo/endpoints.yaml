@@ -1,0 +1,8 @@
+version: "0.1"
+endpoints:
+    - name: backend-endpoint
+      port: 8080
+      type: REST
+      networkVisibility: ""
+      context: /
+      schemaFilePath: ""
