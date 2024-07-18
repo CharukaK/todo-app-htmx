@@ -13,6 +13,7 @@ import (
 const (
 	DB_NAME = "todo.db"
 	DB_PATH = "./" + DB_NAME
+	TIO     = "TOTO"
 )
 
 func main() {
