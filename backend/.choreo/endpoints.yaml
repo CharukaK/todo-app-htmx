@@ -3,6 +3,6 @@ endpoints:
     - name: backend-endpoint
       port: 8080
       type: REST
-      networkVisibility: ""
+      networkVisibility: "Public"
       context: /
       schemaFilePath: ""
